@@ -806,6 +806,10 @@ function init() {
     if (totalDuration() > 0) { e.preventDefault(); e.returnValue = ""; }
   });
 
+  // Tutoriel interactif (premier lancement)
+  $("#btnTutorial").onclick = () => startTutorial(true);
+  setTimeout(() => startTutorial(), 700);
+
   drawFrame();
   renderTimeline();
 }
