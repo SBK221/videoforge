@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="VideoForge — Éditeur vidéo professionnel dans votre navigateur. Simple, puissant, gratuit.">
+<title>VideoForge — Montage vidéo professionnel dans le navigateur</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🎬</span>
+    <span class="brand-name">Video<b>Forge</b></span>
+    <span class="badge" id="modeBadge">Mode Simple</span>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="btn" id="btnMode" title="Basculer Simple / Expert">⚡ Mode Expert</button>
+    <button class="btn" id="btnTheme" title="Thème clair / sombre">🌙 Thème</button>
+    <button class="btn" id="btnShortcuts" title="Raccourcis clavier (?)">⌨ Raccourcis</button>
+    <button class="btn" id="btnUndo" title="Annuler">↩︎</button>
+    <button class="btn" id="btnRedo" title="Rétablir">↪︎</button>
+    <button class="btn btn-primary" id="btnExport">⬇ Exporter la vidéo</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- Panneau gauche : médias -->
+  <aside class="panel panel-media" id="panelMedia">
+    <div class="panel-header">
+      <h2>Médias</h2>
+      <div class="panel-actions">
+        <button class="btn btn-sm" id="btnImport" title="Importer">＋ Importer</button>
+      </div>
+    </div>
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-inner">
+        <span class="dz-icon">📁</span>
+        <p>Glissez vos vidéos, images et musiques ici<br><small>ou cliquez pour parcourir</small></p>
+      </div>
+      <input type="file" id="fileInput" multiple accept="video/*,image/*,audio/*" hidden>
+    </div>
+    <div class="media-grid" id="mediaGrid"></div>
+
+    <div class="panel-section" id="subtitlesPanel">
+      <h3>Sous-titres</h3>
+      <div class="chip-row">
+        <button class="btn btn-sm" id="btnImportSrt">📥 Importer .srt</button>
+        <button class="btn btn-sm" id="btnExportSrt">📤 Exporter .srt</button>
+        <button class="btn btn-sm" id="btnAutoSubs" title="Générer des sous-titres à partir des pistes texte existantes">✨ Auto</button>
+      </div>
+      <div class="subs-list" id="subsList"></div>
+    </div>
+
+    <div class="panel-section" id="musicLibraryPanel">
+      <h3>Bibliothèque musicale <small style="color:var(--ok)">libre de droits</small></h3>
+      <div class="music-list" id="musicList"></div>
+    </div>
+
+    <div class="panel-section expert-only" id="transitionsPanel">
+      <h3>Transitions</h3>
+      <div class="chip-row" id="transitionList"></div>
+    </div>
+  </aside>
+
+  <!-- Zone centrale : prévisualisation -->
+  <section class="preview-zone">
+    <div class="preview-toolbar">
+      <div class="timecode" id="timecode">00:00:00.00</div>
+      <div class="preview-controls">
+        <button class="btn ctrl" id="btnStart" title="Début">⏮</button>
+        <button class="btn ctrl" id="btnPrevFrame" title="Image précédente">◀|</button>
+        <button class="btn ctrl ctrl-play" id="btnPlay" title="Lecture / Pause">▶</button>
+        <button class="btn ctrl" id="btnNextFrame" title="Image suivante">|▶</button>
+        <button class="btn ctrl" id="btnEnd" title="Fin">⏭</button>
+      </div>
+      <div class="zoom-wrap expert-only">
+        <label>Zoom</label>
+        <input type="range" id="zoomRange" min="20" max="400" value="80">
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="previewCanvas" width="1280" height="720"></canvas>
+      <div class="rec-overlay" id="recOverlay" hidden>⏺ Export en cours…</div>
+    </div>
+  </section>
+
+  <!-- Panneau droit : propriétés -->
+  <aside class="panel panel-props" id="panelProps">
+    <div class="panel-header"><h2>Propriétés</h2></div>
+    <div class="props-content" id="propsContent">
+      <p class="hint">Sélectionnez un clip dans la timeline pour éditer ses propriétés.</p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- Timeline -->
+<section class="timeline-zone">
+  <div class="timeline-toolbar">
+    <div class="tool-group">
+      <button class="btn btn-sm" id="btnSplit" title="Diviser (S)">✂ Diviser</button>
+      <button class="btn btn-sm" id="btnDelete" title="Supprimer (Suppr)">🗑 Supprimer</button>
+      <button class="btn btn-sm" id="btnDuplicate" title="Dupliquer">⧉ Dupliquer</button>
+      <button class="btn btn-sm" id="btnAddText" title="Ajouter du texte">T Texte</button>
+      <button class="btn btn-sm expert-only" id="btnAddTrack" title="Ajouter une piste">＋ Piste</button>
+    </div>
+    <div class="tool-group">
+      <button class="btn btn-sm expert-only" id="btnKeyframe" title="Ajouter une keyframe" style="display:none">◆ Keyframe</button>
+      <span class="hint" id="keyframeHint"></span>
+      <span class="hint" id="totalDuration">Durée : 00:00</span>
+    </div>
+  </div>
+  <div class="timeline-scroll" id="timelineScroll">
+    <div class="ruler" id="ruler"></div>
+    <div class="tracks" id="tracks"></div>
+    <div class="playhead" id="playhead"></div>
+  </div>
+</section>
+
+<!-- Modal export -->
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-box">
+    <h2>Exporter la vidéo</h2>
+    <div class="form-row">
+      <label>Résolution</label>
+      <select id="expRes">
+        <option value="1280">1280 × 720 (HD)</option>
+        <option value="1920" selected>1920 × 1080 (Full HD)</option>
+        <option value="3840">3840 × 2160 (4K)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Qualité (Mbps)</label>
+      <input type="range" id="expQuality" min="2" max="40" value="12">
+      <span id="expQualityVal">12</span>
+    </div>
+    <div class="form-row">
+      <label>Format</label>
+      <select id="expFormat">
+        <option value="webm">WebM (recommandé)</option>
+      </select>
+    </div>
+    <p class="hint">L'export lit la timeline en temps réel dans votre navigateur. Aucun fichier n'est envoyé sur un serveur.</p>
+    <div class="modal-actions">
+      <button class="btn" id="expCancel">Annuler</button>
+      <button class="btn btn-primary" id="expStart">Lancer l'export</button>
+    </div>
+    <div class="progress-wrap" id="expProgress" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="expProgressFill"></div></div>
+      <span id="expProgressLabel">0%</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal raccourcis -->
+<div class="modal" id="shortcutsModal" hidden>
+  <div class="modal-box modal-wide">
+    <h2>⌨ Raccourcis clavier</h2>
+    <div class="shortcut-grid">
+      <div><kbd>Space</kbd><span>Lecture / Pause</span></div>
+      <div><kbd>J</kbd><span>Retour rapide</span></div>
+      <div><kbd>K</kbd><span>Pause</span></div>
+      <div><kbd>L</kbd><span>Avance rapide</span></div>
+      <div><kbd>←</kbd><kbd>→</kbd><span>−1s / +1s</span></div>
+      <div><kbd>Shift</kbd>+<kbd>←/→</kbd><span>−5s / +5s</span></div>
+      <div><kbd>,</kbd><kbd>.</kbd><span>Image préc / suiv</span></div>
+      <div><kbd>Home</kbd><kbd>End</kbd><span>Début / Fin</span></div>
+      <div><kbd>S</kbd><span>Diviser le clip</span></div>
+      <div><kbd>Suppr</kbd><span>Supprimer le clip</span></div>
+      <div><kbd>D</kbd><span>Dupliquer le clip</span></div>
+      <div><kbd>T</kbd><span>Nouveau texte</span></div>
+      <div><kbd>Ctrl+Z</kbd><span>Annuler</span></div>
+      <div><kbd>Ctrl+Shift+Z</kbd><span>Rétablir</span></div>
+      <div><kbd>Ctrl+A</kbd><span>Sélectionner tout (fin timeline)</span></div>
+      <div><kbd>Ctrl+M</kbd><span>Nouvelle piste vidéo</span></div>
+      <div><kbd>F</kbd><span> Plein écran préview</span></div>
+      <div><kbd>?</kbd><span>Cette aide</span></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" id="scClose">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/effects.js"></script>
+<script src="js/subtitles.js"></script>
+<script src="js/music.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
